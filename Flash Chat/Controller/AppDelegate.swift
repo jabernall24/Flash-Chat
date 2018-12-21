@@ -21,6 +21,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.rootViewController = UINavigationController(rootViewController: HomeViewController())
         window?.makeKeyAndVisible()
         FirebaseApp.configure()
+        
+        let myDatabase = Database.database().reference()
+        
+        myDatabase.setValue("Data!")
         return true
     }
 
