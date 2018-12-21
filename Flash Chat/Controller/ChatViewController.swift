@@ -8,6 +8,8 @@
 
 import UIKit
 import FirebaseAuth
+import FirebaseDatabase
+import ProgressHUD
 
 class ChatViewController: UIViewController, UITextFieldDelegate {
     
@@ -15,6 +17,8 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
     private var containerDown: NSLayoutConstraint!
     private var containerUp: NSLayoutConstraint!
     private var containerUpNoAutoCorrect: NSLayoutConstraint!
+    var messageArray: [Message] = []
+    let messageDB = Database.database().reference().child("Messages")
     
     private lazy var tableView: UITableView = {
         let t = UITableView()
@@ -36,6 +40,7 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
     private let sendButton: UIButton = {
         let b = UIButton()
         b.translatesAutoresizingMaskIntoConstraints = false
+        b.isEnabled = false
         b.backgroundColor = #colorLiteral(red: 0, green: 0.4784313725, blue: 1, alpha: 1)
         b.setTitle("Send", for: .normal)
         b.setTitleColor(#colorLiteral(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), for: .normal)
@@ -55,16 +60,6 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
         t.layer.cornerRadius = 10
         return t
     }()
-    
-//    private let m: UITextView = {
-//        let t = UITextView()
-//        t.translatesAutoresizingMaskIntoConstraints = false
-//        t.backgroundColor = #colorLiteral(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
-//        t.textColor = .black
-//        t.textAlignment = .center
-//        t.layer.cornerRadius = 10
-//        return t
-//    }()
     
     private let containerView: UIView = {
         let v = UIView()
@@ -86,15 +81,49 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
         messageTextField.delegate = self
         
         setUp()
+        retrieveMessages()
     }
     
     @objc func onSend(){
-        containerDown.isActive = true
-        containerUp.isActive = false
-        containerUpNoAutoCorrect.isActive = false
-        UIView.animate(withDuration: 0.5) {
-            self.view.endEditing(true)
-            self.view.layoutIfNeeded()
+        ProgressHUD.show()
+        if messageTextField.text == ""{
+            return
+        }
+        messageTextField.isEnabled = false
+        sendButton.isEnabled = false
+        
+        let messageDictionary = [
+            "User" : Auth.auth().currentUser?.email,
+            "MessageBody": messageTextField.text!
+        ]
+        
+        messageDB.childByAutoId().setValue(messageDictionary){ (error, reference) in
+            self.messageTextField.isEnabled = true
+            self.sendButton.isEnabled = true
+            ProgressHUD.dismiss()
+            if error == nil{
+                self.messageTextField.text = nil
+                self.containerDown.isActive = true
+                self.containerUp.isActive = false
+                self.containerUpNoAutoCorrect.isActive = false
+                UIView.animate(withDuration: 0.5) {
+                    self.messageTextField.endEditing(true)
+                    self.view.layoutIfNeeded()
+                }
+            }else{
+                print(error?.localizedDescription)
+            }
+        }
+    }
+    
+    func retrieveMessages(){
+        messageDB.observe(.childAdded) { (snapshot) in
+            let snapValue = snapshot.value as? [String: String]
+            let messages = snapValue.flatMap({(dictionary) -> Message in
+                Message(dictionary: dictionary)
+            })
+            self.messageArray.append(messages!)
+            self.tableView.reloadData()
         }
     }
 
@@ -126,12 +155,6 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
         messageTextField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -80).isActive = true
         messageTextField.heightAnchor.constraint(equalToConstant: 32).isActive = true
         
-//        containerView.addSubview(m)
-//        m.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8).isActive = true
-//        m.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8).isActive = true
-//        m.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -80).isActive = true
-//        m.heightAnchor.constraint(equalToConstant: 32).isActive = true
-        
         containerView.addSubview(sendButton)
         sendButton.leadingAnchor.constraint(equalTo: messageTextField.trailingAnchor, constant: 8).isActive = true
         sendButton.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8).isActive = true
@@ -147,6 +170,7 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
     
     func textFieldDidBeginEditing(_ textField: UITextField) {
         containerDown.isActive = false
+        sendButton.isEnabled = true
         if textField.autocorrectionType == .yes{
             containerUp.isActive = true
             containerUpNoAutoCorrect.isActive = false
@@ -164,12 +188,23 @@ class ChatViewController: UIViewController, UITextFieldDelegate {
 
 extension ChatViewController: UITableViewDelegate, UITableViewDataSource{
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 20
+        return messageArray.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: cellID, for: indexPath) as! MessageCell
+        cell.message = messageArray[indexPath.row]
         return cell
     }
     
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        self.containerDown.isActive = true
+        self.containerUp.isActive = false
+        self.containerUpNoAutoCorrect.isActive = false
+        UIView.animate(withDuration: 0.5) {
+            self.messageTextField.endEditing(true)
+            self.view.layoutIfNeeded()
+        }
+    }
 }

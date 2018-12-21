@@ -8,6 +8,7 @@
 
 import UIKit
 import FirebaseAuth
+import ProgressHUD
 
 class RegisterViewController: UIViewController {
 
@@ -70,12 +71,14 @@ class RegisterViewController: UIViewController {
     }
     
     @objc func onRegister(){
+        ProgressHUD.show()
         registerButton.isEnabled = false
         guard let email = emailTextField.text else { return }
         guard let password = passwordTextField.text else { return }
         
         Auth.auth().createUser(withEmail: email, password: password) { (result, error) in
             self.registerButton.isEnabled = true
+            ProgressHUD.dismiss()
             if error == nil{
                 let vc = ChatViewController()
                 self.navigationController?.pushViewController(vc, animated: true)

@@ -8,6 +8,7 @@
 
 import UIKit
 import FirebaseAuth
+import ProgressHUD
 
 class LogInViewController: UIViewController {
     
@@ -69,22 +70,24 @@ class LogInViewController: UIViewController {
     }
     
     @objc func onLogIn(){
-//        logInButton.isEnabled = false
-//        guard let email = emailTextField.text else {return}
-//        guard let password = passwordTextField.text else {return}
-//
-//        Auth.auth().signIn(withEmail: email, password: password) { (result, error) in
-//            self.logInButton.isEnabled = true
-//            if error == nil{
+        ProgressHUD.show()
+        logInButton.isEnabled = false
+        guard let email = emailTextField.text else {return}
+        guard let password = passwordTextField.text else {return}
+
+        Auth.auth().signIn(withEmail: email, password: password) { (result, error) in
+            self.logInButton.isEnabled = true
+            ProgressHUD.dismiss()
+            if error == nil{
                 let vc = ChatViewController()
                 self.navigationController?.pushViewController(vc, animated: true)
-//            }else{
-//                self.warningLabel.isHidden = false
-//                if let warning = error?.localizedDescription {
-//                    self.warningLabel.text = warning
-//                }
-//            }
-//        }
+            }else{
+                self.warningLabel.isHidden = false
+                if let warning = error?.localizedDescription {
+                    self.warningLabel.text = warning
+                }
+            }
+        }
     }
     
     fileprivate func setUpView(){
