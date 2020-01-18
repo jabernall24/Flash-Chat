@@ -2,8 +2,7 @@
 
 Udemy's Flash Chat app done without storyboards, completly programatically.
 
-## Sample Run: 
-<img src='https://imgur.com/tx9su7y.gif' title='Video Walkthrough' width='' alt='Video Walkthrough' />
+## Sample Run: https://imgur.com/tx9su7y.gif
 
 ## MIT License
 
